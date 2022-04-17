@@ -33,43 +33,32 @@ matrixForGettingIndices = np.zeros((width,height))
 w  = capture.get(3)  # float `width`
 h = capture.get(4)  # float `height`
 print(w,h)
-upperTriangleIndices = []
-lowerTriangleIndices = []
-rightTriangleIndices = []
-leftTriangleIndices = []
-
-upX = []
-upY = []
-lowX = []
-lowY = []
-rightX = []
-rightY = []
-leftX = []
-leftY = []
+top = []
+bot = []
+right = []
+left = []
 
 for x in range(0,width):
     for y in range(0,height):
-        top = True
-        bottom = True
+        leftLine = True
+        rightLine = True
 
-        top = isLeft({"X": 0, "Y": 0}, {"X": width, "Y": height}, {"X": x, "Y": y})
+        leftLine = isLeft({"X": 0, "Y": 0}, {"X": width, "Y": height}, {"X": x, "Y": y})
        
-        bottom = isLeft({"X": width, "Y": 0}, {"X": 0, "Y": height}, {"X": x, "Y": y})
+        rightLine = isLeft({"X": width, "Y": 0}, {"X": 0, "Y": height}, {"X": x, "Y": y})
         # print(x, y, top, bottom)
-        if top and not bottom:
+        if leftLine and rightLine:
             # add index to upper triangle indices
-            upperTriangleIndices.append((y, x))
-            upX.append(x)
-            upY.append(y)
-        if not top and not bottom:
+            left.append((y, x))
+        elif not leftLine and not rightLine:
             # add index to lower triangle indices
-            lowerTriangleIndices.append((y, x))
-        if top and not bottom:
+            right.append((y, x))
+        elif leftLine and not rightLine:
             # add index to right triangle indices
-            rightTriangleIndices.append((y, x))
-        if not top and bottom:
+            bot.append((y, x))
+        elif not leftLine and rightLine:
             # add index to left triangle indices
-            leftTriangleIndices.append((y, x))
+            top.append((y, x))
 
 
 # print(upperTriangleIndices)
@@ -96,8 +85,9 @@ for x in range(0,width):
 # rightIndices = upperTriangleIndicesSet.intersection(lowerTriRotatedIndicesSet)
 # bottomIndices = lowerTriangleIndicesSet.intersection(lowerTriRotatedIndicesSet)
 # leftIndices = lowerTriangleIndicesSet.intersection(upperTriRotatedIndicesSet)
-[print(j) for j in lowerTriangleIndices]
 # print((upX, upY))
+# print(top.shape, bot.shape, right.shape, left.shape)
+print(np.array(top)[:,0], np.array(top)[:, 1])
 while capture.isOpened():
     ret, frame = capture.read()
     if frame is None:
@@ -113,8 +103,10 @@ while capture.isOpened():
 
     fgMask = backSub.apply(gray)
     
-    #  use upperTriangleIndices to set all values in the upper triangle to 0
-
+    # Use this to check if the triangles are correct 
+    # set all values in top to 255
+    # split too to rows cols array
+    # fgMask[(np.array(bot)[:,0], np.array(bot)[:, 1])] = 255
     # fgMask[upX, upY] = 255
     
     # cv.rectangle(fgMask, (10, 2), (100,20), (255,255,255), -1)
@@ -134,24 +126,23 @@ while capture.isOpened():
     
     fgMaskMatrix = np.array(fgMask)
     #calculate which quadrants have most difference
-    topDiff = [fgMaskMatrix[j] for j in upperTriangleIndices]
-    rightDiff = [fgMaskMatrix[j] for j in rightTriangleIndices]
-    bottomDiff = [fgMaskMatrix[j] for j in lowerTriangleIndices]
-    leftDiff = [fgMaskMatrix[j] for j in leftTriangleIndices]
+    topDiff = [fgMaskMatrix[j] for j in top]
+    rightDiff = [fgMaskMatrix[j] for j in right]
+    bottomDiff = [fgMaskMatrix[j] for j in bot]
+    leftDiff = [fgMaskMatrix[j] for j in left]
     
-    # print(sum(topDiff))
     # #send that key to pygame
     direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
     max_direction = direction_scores.get(max(direction_scores))
-    # print(max_direction)
+    print(max_direction)
     # pyautogui.press(max_direction)
     #left and right aren't working, check out their sets or something
-    if i % 10 == 0:
-        print(max_direction)
-        print("top: ", sum(topDiff))
-        print("right: ", sum(rightDiff))
-        print("bottom: ", sum(bottomDiff))
-        print("left: ", sum(leftDiff))
+    # if i % 10 == 0:
+    #     print(max_direction)
+    #     print("top: ", sum(topDiff))
+    #     print("right: ", sum(rightDiff))
+    #     print("bottom: ", sum(bottomDiff))
+    #     print("left: ", sum(leftDiff))
 #         #print(upperTriangleIndices)
 #         #print(fgMaskMatrix.shape)
 # #         print(len(fgMask))
