@@ -88,7 +88,7 @@ for x in range(0,width):
 # print((upX, upY))
 # print(top.shape, bot.shape, right.shape, left.shape)
 rThreshold = 170
-bThreshold = 266
+bThreshold = 170
 gThreshold = 266
 while capture.isOpened():
     ret, frame = capture.read()
@@ -99,9 +99,9 @@ while capture.isOpened():
     frame = cv.flip(frame, 1)
 
     # set the frame value to 255 if red is greater than threshold
-    frame[:,:,2] = np.where(frame[:,:,2] > rThreshold, 255, 0)
-    frame[:,:,1] = np.where(frame[:,:,2] > rThreshold, 255, 0)
-    frame[:,:,0] = np.where(frame[:,:,2] > rThreshold, 255, 0)
+    frame[:,:,2] = np.where(frame[:,:,0] > bThreshold, 255, 0)
+    frame[:,:,1] = np.where(frame[:,:,0] > bThreshold, 255, 0)
+    frame[:,:,0] = np.where(frame[:,:,0] > bThreshold, 255, 0)
     # print(frame[(0,0)])
 
     # convert any red above the threshold to white, everything else to black
