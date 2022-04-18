@@ -15,6 +15,7 @@ if False:
 else:
     backSub = cv.createBackgroundSubtractorKNN()
 
+# detects if point c is to the left (counter-clockwise) of the line segment formed by points a and b
 def isLeft(a, b, c):
     return ((b["X"] - a["X"])*(c["Y"] - a["Y"]) - (b["Y"] - a["Y"])*(c["X"] - a["X"])) > 0
 
