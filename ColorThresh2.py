@@ -32,7 +32,9 @@ class ColorDetector():
     hRange = 10
     sRange = 10
     vRange = 40
-
+    
+    lastClick = None
+    
     def __init__(self):
         for x in range(0,self.width):
             for y in range(0,self.height):
@@ -59,6 +61,7 @@ class ColorDetector():
     def onClick(self, event, x, y, flags, param):
         
         if event == cv.EVENT_LBUTTONDOWN:
+            self.lastClick = (x, y)
             ret, frame = self.capture.read()
             rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
             hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
@@ -138,6 +141,7 @@ class ColorDetector():
         cv.createTrackbar("S", "HSV Range", self.sRange, 255, self.onSTrackbarChange)
         cv.createTrackbar("V", "HSV Range", self.vRange, 255, self.onVTrackbarChange)
         
+        i = 0
         while self.capture.isOpened():
             ret, frame = self.capture.read()
             if frame is None:
@@ -147,6 +151,8 @@ class ColorDetector():
             hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
             mask = cv.inRange(hsv, self.colorLower, self.colorUpper)
 
+            if self.lastClick is not None:
+                cv.circle(frame, self.lastClick, 5, (0, 0, 255), -1)
             
             # cv.line(fgMask, (10, 2), (100, 20), (255, 255, 255), 3)
             # display text on the frame
@@ -166,18 +172,20 @@ class ColorDetector():
             
             cv.imshow('detector', mask)
 
-            fgMaskMatrix = np.array(mask)
-            #calculate which quadrants have most difference
-            topDiff = [fgMaskMatrix[j] for j in self.top]
-            rightDiff = [fgMaskMatrix[j] for j in self.right]
-            bottomDiff = [fgMaskMatrix[j] for j in self.bot]
-            leftDiff = [fgMaskMatrix[j] for j in self.left]
-            
-            # #send that key to pygame
-            direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
-            max_direction = direction_scores.get(max(direction_scores))
-            print(max_direction)
+            if i % 15 == 0:
+                fgMaskMatrix = np.array(mask)
+                #calculate which quadrants have most difference
+                topDiff = [fgMaskMatrix[j] for j in self.top]
+                rightDiff = [fgMaskMatrix[j] for j in self.right]
+                bottomDiff = [fgMaskMatrix[j] for j in self.bot]
+                leftDiff = [fgMaskMatrix[j] for j in self.left]
+                
+                # #send that key to pygame
+                direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
+                max_direction = direction_scores.get(max(direction_scores))
+                print(max_direction)
 
+            i = i + 1
             keyboard = cv.waitKey(1)
             if keyboard > 0:
                 # if the + is pressed
