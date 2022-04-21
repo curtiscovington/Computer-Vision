@@ -20,11 +20,12 @@ class ColorDetector():
     left = []
     right = []
 
-    defaultLower =  np.array([11,172,176], np.uint8)
-    defaultUpper =  np.array([52,183,254], np.uint8)
+    defaultLower =  np.array([15,141,172], np.uint8)
+    defaultUpper =  np.array([26,203,248], np.uint8)
+    
     # some blue
-    colorLower = defaultLower
-    colorUpper = defaultUpper
+    colorLower = np.array(defaultLower, copy=True)
+    colorUpper = np.array(defaultUpper, copy=True)
     color = None
 
     threshold = 10
@@ -37,7 +38,7 @@ class ColorDetector():
     
     lastClick = None
     testImg = None
-    showNormal = False
+    mode = 0
     current_direction = None
     
     def __init__(self):
@@ -96,12 +97,18 @@ class ColorDetector():
         cv.putText(self.testImg, str(self.colorUpper), (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv.putText(self.testImg, str(self.colorLower), (10, 230), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         self.testImg = cv.cvtColor(self.testImg, cv.COLOR_HSV2BGR)
+        
+        cv.setTrackbarPos("-H", "HSV Range", self.colorLower[0])
+        cv.setTrackbarPos("-S", "HSV Range", self.colorLower[1])
+        cv.setTrackbarPos("-V", "HSV Range", self.colorLower[2])
+        cv.setTrackbarPos("+H", "HSV Range", self.colorUpper[0])
+        cv.setTrackbarPos("+S", "HSV Range", self.colorUpper[1])
+        cv.setTrackbarPos("+V", "HSV Range", self.colorUpper[2])
 
     def onClick(self, event, x, y, flags, param):
         
         if event == cv.EVENT_LBUTTONDOWN:
             self.lastClick = (x, y)
-            print("click")
             _, frame = self.capture.read()
 
             # frame[y, x] = [255, 0, 0]
@@ -118,7 +125,6 @@ class ColorDetector():
             uS = min(max(0, pixel[1] + self.sRange), 255)
             uV = min(max(0, pixel[2] + self.vRange), 255)
             # set trackbars to the values of the clicked pixel
-            print("tracks")
             cv.setTrackbarPos("-H", "HSV Range", lH)
             cv.setTrackbarPos("+H", "HSV Range", uH)
             cv.setTrackbarPos("-S", "HSV Range", lS)
@@ -127,7 +133,6 @@ class ColorDetector():
             cv.setTrackbarPos("+V", "HSV Range", lV)
             self.colorLower = np.array([lH, lS, lV])
             self.colorUpper = np.array([uH, uS, uV])
-            print("done")
 
     def getRectangle(self, start, end):
         # get the rectangle coordinates from the start and end points
@@ -159,9 +164,8 @@ class ColorDetector():
    
     def run(self):
         cv.startWindowThread()
-        cv.namedWindow('window')
-        cv.setMouseCallback("window", self.onClick)
         cv.namedWindow('detector')
+        cv.setMouseCallback("detector", self.onClick)
 
         cv.namedWindow('HSV Range')
         self.updateTestImage()
@@ -188,19 +192,23 @@ class ColorDetector():
 
             if self.current_direction is not None:
                 cv.putText(frame, self.current_direction, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-            
-            # draw a red line from the upper-left corner to the lower-right corner
-            cv.line(mask, (0, 0), (self.width,self.height), (255, 0, 0), 3)
-            # draw a red line from the upper-right corner to the lower-left corner
-            cv.line(mask, (self.width, 0), (0,self.height), (255, 0, 0), 3)
 
-            #cv.imshow('Frame', frame)
-            cv.imshow('window', frame)
+            # combine the mask with the frame
             
-            if self.showNormal:
+
+            if self.mode == 0:
                 cv.imshow('detector', frame)
-            else:
+            elif self.mode == 1:
+                # draw a red line from the upper-left corner to the lower-right corner
+                cv.line(mask, (0, 0), (self.width,self.height), (255, 0, 0), 3)
+                # draw a red line from the upper-right corner to the lower-left corner
+                cv.line(mask, (self.width, 0), (0,self.height), (255, 0, 0), 3)
                 cv.imshow('detector', mask)
+            else:
+                res = cv.bitwise_and(frame, frame, mask=mask)
+                if self.current_direction is not None:
+                    cv.putText(res, self.current_direction, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv.imshow('detector', res)
 
             cv.imshow('HSV Range', self.testImg)
 
@@ -228,10 +236,13 @@ class ColorDetector():
                 elif keyboard == ord('-'):
                     self.threshold -= 1
                 elif keyboard == ord('r'):
-                    self.colorLower = self.defaultLower
-                    self.colorUpper = self.defaultUpper
+                    self.colorLower = np.array(self.defaultLower, copy=True)
+                    self.colorUpper = np.array(self.defaultUpper, copy=True)
+                    
+                    self.updateTestImage()
                 elif keyboard == ord('m'):
-                    self.showNormal = not self.showNormal
+                    # change the mode
+                    self.mode = (self.mode + 1) % 3
                 # space is pressed
                 elif keyboard == ord(' '):
                     pyautogui.press("space")
