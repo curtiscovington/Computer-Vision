@@ -11,8 +11,8 @@ print(cv.__version__)
 def isLeft(a, b, c):
     return ((b["X"] - a["X"])*(c["Y"] - a["Y"]) - (b["Y"] - a["Y"])*(c["X"] - a["X"])) > 0
 
-
-class ColorDetector():
+backSub = cv.createBackgroundSubtractorKNN()
+class Detector():
     colorMode = True
     capture = None
     top = []
@@ -41,6 +41,7 @@ class ColorDetector():
     mode = 0
     current_direction = None
     
+    useBackgroundSubtraction = False
     def __init__(self):
         self.hRange = 0
         self.sRange = 0
@@ -184,8 +185,11 @@ class ColorDetector():
             self.updateTestImage()
             # mirror the frame
             frame = cv.flip(frame, 1)
-            hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-            mask = cv.inRange(hsv, self.colorLower, self.colorUpper)
+            if self.useBackgroundSubtraction:
+                mask = backSub.apply(frame)
+            else:
+                hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+                mask = cv.inRange(hsv, self.colorLower, self.colorUpper)
 
             if self.lastClick is not None:
                 cv.circle(frame, self.lastClick, 5, (0, 0, 255), -1)
@@ -246,13 +250,15 @@ class ColorDetector():
                 # space is pressed
                 elif keyboard == ord(' '):
                     pyautogui.press("space")
+                elif keyboard == ord('b'):
+                    self.useBackgroundSubtraction = not self.useBackgroundSubtraction
                 # if the 'q' key is pressed
                 elif keyboard == ord('q'):
                     self.capture.release()
                     break
     
     
-colorDetector = ColorDetector()
-colorDetector.run()
+detector = Detector()
+detector.run()
 
 cv.destroyAllWindows()
