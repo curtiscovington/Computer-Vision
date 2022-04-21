@@ -42,6 +42,9 @@ class Detector():
     current_direction = None
     
     useBackgroundSubtraction = False
+
+    playGame = False
+
     def __init__(self):
         self.hRange = 0
         self.sRange = 0
@@ -229,7 +232,8 @@ class Detector():
                 max_direction = direction_scores.get(max(direction_scores))
                 self.current_direction = max_direction
                 # print(max_direction)
-                pyautogui.press(max_direction)
+                if self.playGame:
+                    pyautogui.press(max_direction)
             i = i + 1
             keyboard = cv.waitKey(1)
             if keyboard > 0:
@@ -249,7 +253,11 @@ class Detector():
                     self.mode = (self.mode + 1) % 3
                 # space is pressed
                 elif keyboard == ord(' '):
-                    pyautogui.press("space")
+                    if not self.playGame:
+                        self.playGame = True
+                        pyautogui.press("space")
+                    else:
+                        self.playGame = False
                 elif keyboard == ord('b'):
                     self.useBackgroundSubtraction = not self.useBackgroundSubtraction
                 # if the 'q' key is pressed
