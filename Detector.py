@@ -85,6 +85,11 @@ class Detector():
                 elif not leftLine and rightLine:
                     # add index to left triangle indices
                     self.top.append((y, x))
+                
+        self.top = np.array(self.top)
+        self.bot = np.array(self.bot)
+        self.left = np.array(self.left)
+        self.right = np.array(self.right)
     
     def updateTestImage(self):
         
@@ -115,13 +120,11 @@ class Detector():
             self.lastClick = (x, y)
             _, frame = self.capture.read()
 
-            # frame[y, x] = [255, 0, 0]
-            # rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
             hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-            # get pixels in a 3 x 3 grid around the click
            
             
             pixel = hsv[y, x]
+            
             lH = min(max(0, pixel[0] - self.hRange), 179)
             lS = min(max(0, pixel[1] - self.sRange), 255)
             lV = min(max(0, pixel[2] - self.vRange), 255)
@@ -200,7 +203,6 @@ class Detector():
             if self.current_direction is not None:
                 cv.putText(frame, self.current_direction, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-            # combine the mask with the frame
             
 
             if self.mode == 0:
@@ -212,26 +214,25 @@ class Detector():
                 cv.line(mask, (self.width, 0), (0,self.height), (255, 0, 0), 3)
                 cv.imshow('detector', mask)
             else:
+                # combine the mask with the frame
                 res = cv.bitwise_and(frame, frame, mask=mask)
                 if self.current_direction is not None:
                     cv.putText(res, self.current_direction, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv.imshow('detector', res)
 
             cv.imshow('HSV Range', self.testImg)
-
-            if i % 15 == 0:
-                fgMaskMatrix = np.array(mask)
-                #calculate which quadrants have most difference
-                topDiff = [fgMaskMatrix[j] for j in self.top]
-                rightDiff = [fgMaskMatrix[j] for j in self.right]
-                bottomDiff = [fgMaskMatrix[j] for j in self.bot]
-                leftDiff = [fgMaskMatrix[j] for j in self.left]
+            
+            if i % 5 == 0:                
+                topDiff = mask[self.top[:, 0], self.top[:, 1]]
+                bottomDiff = mask[self.bot[:, 0], self.bot[:, 1]]
+                leftDiff = mask[self.left[:, 0], self.left[:, 1]]
+                rightDiff = mask[self.right[:, 0], self.right[:, 1]]
                 
                 # #send that key to pygame
                 direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
                 max_direction = direction_scores.get(max(direction_scores))
                 self.current_direction = max_direction
-                # print(max_direction)
+                
                 if self.playGame:
                     pyautogui.press(max_direction)
             i = i + 1
@@ -252,11 +253,14 @@ class Detector():
                     # change the mode
                     self.mode = (self.mode + 1) % 3
                 # space is pressed
-                elif keyboard == ord(' '):
+                elif keyboard == ord(' '):      
                     if not self.playGame:
+                        print("Play!")
                         self.playGame = True
-                        pyautogui.press("space")
-                    else:
+                        
+                elif keyboard == ord('/'):
+                    if self.playGame:
+                        print("Stop!")
                         self.playGame = False
                 elif keyboard == ord('b'):
                     self.useBackgroundSubtraction = not self.useBackgroundSubtraction
