@@ -7,11 +7,13 @@ import pyautogui
 print(cv.__version__)
 
 
-# detects if point c is to the left (counter-clockwise) of the line segment formed by points a and b
-def isLeft(a, b, c):
+# detects if point c is to the counter-clockwise of the line segment formed by points a and b
+def isCounterClockwise(a, b, c):
     return ((b["X"] - a["X"])*(c["Y"] - a["Y"]) - (b["Y"] - a["Y"])*(c["X"] - a["X"])) > 0
 
 backSub = cv.createBackgroundSubtractorKNN()
+#LK parameters
+lkParams = dict(winSize  = (15, 15), maxLevel = 2, criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
 class Detector():
     colorMode = True
     capture = None
@@ -39,9 +41,9 @@ class Detector():
     lastClick = None
     testImg = None
     mode = 0
-    current_direction = None
-    
-    useBackgroundSubtraction = False
+    type = 0 # 0 = color, 1 = background subtraction, 2 = KLT
+    currentDirection = None
+    lastFrame = None
 
     playGame = False
 
@@ -64,25 +66,21 @@ class Detector():
         self.width = int(self.capture.get(cv.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.capture.get(cv.CAP_PROP_FRAME_HEIGHT))
 
+        # set up pixel locations in each quadrant
         for x in range(0,self.width):
             for y in range(0,self.height):
-                leftLine = True
-                rightLine = True
+                quad = self.getQuadrant(x, y)
 
-                leftLine = isLeft({"X": 0, "Y": 0}, {"X": self.width, "Y": self.height}, {"X": x, "Y": y})
-            
-                rightLine = isLeft({"X": self.width, "Y": 0}, {"X": 0, "Y": self.height}, {"X": x, "Y": y})
-                # print(x, y, top, bottom)
-                if leftLine and rightLine:
+                if quad == "left":
                     # add index to upper triangle indices
                     self.left.append((y, x))
-                elif not leftLine and not rightLine:
+                elif quad == "right":
                     # add index to lower triangle indices
                     self.right.append((y, x))
-                elif leftLine and not rightLine:
+                elif quad == "bot":
                     # add index to right triangle indices
                     self.bot.append((y, x))
-                elif not leftLine and rightLine:
+                elif quad == "top":
                     # add index to left triangle indices
                     self.top.append((y, x))
                 
@@ -91,14 +89,27 @@ class Detector():
         self.left = np.array(self.left)
         self.right = np.array(self.right)
     
+    # returns the quadrant of the point, left, right, top, bottom
+    def getQuadrant(self, x, y):
+            leftLine = True
+            rightLine = True
+
+            leftLine = isCounterClockwise({"X": 0, "Y": 0}, {"X": self.width, "Y": self.height}, {"X": x, "Y": y})
+        
+            rightLine = isCounterClockwise({"X": self.width, "Y": 0}, {"X": 0, "Y": self.height}, {"X": x, "Y": y})
+            # print(x, y, top, bottom)
+            if leftLine and rightLine:
+                return "left"
+            elif not leftLine and not rightLine:
+                return "right"
+            elif leftLine and not rightLine:
+                return "bot"
+            elif not leftLine and rightLine:
+                return "top"
+
     def updateTestImage(self):
-        
-        # convert colorLower pixel and colorUpper pixel from hsv to bgr
-        
-        # colorLower = cv.cvtColor(np.uint8([[self.colorLower]]), cv.COLOR_HSV2BGR)
-        # colorUpper = cv.cvtColor(np.uint8([[self.colorUpper]]), cv.COLOR_HSV2BGR)
-        # everything below y = 100 is the colorLower
-        # everything above y = 100 is the colorUpper
+        # everything below y = 200 is the colorLower
+        # everything above y = 200 is the colorUpper
         self.testImg[:, :] = self.colorUpper
         self.testImg[(200,200)[0]:, :] = self.colorLower
 
@@ -191,17 +202,34 @@ class Detector():
             self.updateTestImage()
             # mirror the frame
             frame = cv.flip(frame, 1)
-            if self.useBackgroundSubtraction:
+            if self.type == 1:
+                # background subtraction
                 mask = backSub.apply(frame)
-            else:
+            elif self.type == 0:
+                # color tracking
                 hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
                 mask = cv.inRange(hsv, self.colorLower, self.colorUpper)
+                if self.lastClick is not None:
+                    cv.circle(frame, self.lastClick, 5, (0, 0, 255), -1)
+            else:
+                # KLT tracking
+                if self.lastClick is not None:
+                    lastPoints = np.array([[[self.lastClick[0], self.lastClick[1]]]], dtype=np.float32)
+                    lastGray = cv.cvtColor(self.lastFrame, cv.COLOR_BGR2GRAY)
+                    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+                    nextPoints, st, err = cv.calcOpticalFlowPyrLK(lastGray, gray, lastPoints, None, **lkParams)
 
-            if self.lastClick is not None:
-                cv.circle(frame, self.lastClick, 5, (0, 0, 255), -1)
+                    if nextPoints is not None:
+                        matchingNew = nextPoints[st==1]
+                        matchingOld = lastPoints[st==1]
+                    #put circles where tracked points are
+                    for i, (new, _) in enumerate(zip(matchingNew, matchingOld)):
+                        a, b = new.ravel()
+                        frame = cv.circle(frame, (int(a), int(b)), 5, (0,0,255), -1)
+            
 
-            if self.current_direction is not None:
-                cv.putText(frame, self.current_direction, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            if self.currentDirection is not None:
+                cv.putText(frame, self.currentDirection, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
             
 
@@ -216,26 +244,31 @@ class Detector():
             else:
                 # combine the mask with the frame
                 res = cv.bitwise_and(frame, frame, mask=mask)
-                if self.current_direction is not None:
-                    cv.putText(res, self.current_direction, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                if self.currentDirection is not None:
+                    cv.putText(res, self.currentDirection, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv.imshow('detector', res)
 
             cv.imshow('HSV Range', self.testImg)
             
-            if i % 5 == 0:                
-                topDiff = mask[self.top[:, 0], self.top[:, 1]]
-                bottomDiff = mask[self.bot[:, 0], self.bot[:, 1]]
-                leftDiff = mask[self.left[:, 0], self.left[:, 1]]
-                rightDiff = mask[self.right[:, 0], self.right[:, 1]]
+            if i % 5 == 0:
+                dir = None
+                if self.type == 2:
+                    # KLT tracking update current direction
+                    pass
+                else:
+                    topDiff = mask[self.top[:, 0], self.top[:, 1]]
+                    bottomDiff = mask[self.bot[:, 0], self.bot[:, 1]]
+                    leftDiff = mask[self.left[:, 0], self.left[:, 1]]
+                    rightDiff = mask[self.right[:, 0], self.right[:, 1]]
+                    
+                    # #send that key to pygame
+                    direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
+                    dir = direction_scores.get(max(direction_scores))
                 
-                # #send that key to pygame
-                direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
-                max_direction = direction_scores.get(max(direction_scores))
-                self.current_direction = max_direction
-                
-                if self.playGame:
-                    pyautogui.press(max_direction)
+                if self.playGame and dir is not None and dir is not self.currentDirection:
+                    pyautogui.press(self.currentDirection)
             i = i + 1
+            self.lastFrame = frame.copy()
             keyboard = cv.waitKey(1)
             if keyboard > 0:
                 # if the + is pressed
@@ -263,7 +296,7 @@ class Detector():
                         print("Stop!")
                         self.playGame = False
                 elif keyboard == ord('b'):
-                    self.useBackgroundSubtraction = not self.useBackgroundSubtraction
+                    self.type = (self.type + 1) % 3
                 # if the 'q' key is pressed
                 elif keyboard == ord('q'):
                     self.capture.release()
