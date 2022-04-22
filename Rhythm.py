@@ -137,7 +137,6 @@ if __name__ == "__main__":
     red = (255,0,0)
     black = (0,0,0)
     window_color = (200,200,200)
-    arrow = pygame.image.load('arrow.png')
     clock=pygame.time.Clock() 
 
     score = 0
@@ -151,6 +150,6 @@ if __name__ == "__main__":
     displayWait()
     pygame.display.update()
     
-    final_score = playGame()
-
+    score = playGame()
+    print("Final Score: "+str(score))
     pygame.quit()
