@@ -90,6 +90,8 @@ def playGame():
                     gameStart = True
         
         if gameStart:
+            if score < -5:
+                crashed = True
             display.fill(window_color)
             # display the arrow
             if arrow == 0:
