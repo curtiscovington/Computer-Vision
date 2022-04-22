@@ -308,8 +308,9 @@ class Detector():
                     self.capture.release()
                     break
     
-    
-detector = Detector()
-detector.run()
 
-cv.destroyAllWindows()
+if __name__ == "__main__":
+    detector = Detector()
+    detector.run()
+
+    cv.destroyAllWindows()
