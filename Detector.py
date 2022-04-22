@@ -254,7 +254,8 @@ class Detector():
                 dir = None
                 if self.type == 2:
                     # KLT tracking update current direction
-                    pass
+                    if self.lastClick is not None:
+                        dir = self.getQuadrant(self.lastClick[0], self.lastClick[1]) # potentially use different x,y
                 else:
                     topDiff = mask[self.top[:, 0], self.top[:, 1]]
                     bottomDiff = mask[self.bot[:, 0], self.bot[:, 1]]
@@ -265,8 +266,12 @@ class Detector():
                     direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
                     dir = direction_scores.get(max(direction_scores))
                 
-                if self.playGame and dir is not None and dir is not self.currentDirection:
+                if self.playGame and dir is not self.currentDirection:
+                    self.currentDirection = dir
                     pyautogui.press(self.currentDirection)
+                else:
+                    self.currentDirection = dir
+
             i = i + 1
             self.lastFrame = frame.copy()
             keyboard = cv.waitKey(1)
