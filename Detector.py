@@ -257,6 +257,7 @@ class Detector():
                     if self.lastClick is not None:
                         dir = self.getQuadrant(self.lastClick[0], self.lastClick[1]) # potentially use different x,y
                 else:
+                    # track quadrant based on the max value of each quadrant
                     topDiff = mask[self.top[:, 0], self.top[:, 1]]
                     bottomDiff = mask[self.bot[:, 0], self.bot[:, 1]]
                     leftDiff = mask[self.left[:, 0], self.left[:, 1]]
