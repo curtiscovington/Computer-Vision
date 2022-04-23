@@ -35,8 +35,9 @@ def playGame():
     startTime = 0
     arrowNeeded = False
     arrowsAdded = 0
+    pressedKey = None
     while crashed is not True:
-        dt = clock.tick(60)
+        dt = clock.tick(30)
         if gameStart:
             startTime += dt
         prevArrow = arrow
@@ -66,38 +67,13 @@ def playGame():
                 crashed = True
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
-                    if arrow == 0:
-                        # is there a falling arrow in the green box?
-                        if len(fallingArrows) > 0:
-                            for fallingArrow in fallingArrows:
-                                if fallingArrow['type'] == 0 and fallingArrow['green']:
-                                    score += 1
-                                    fallingArrow['shouldRemove'] = True
-                                    break
+                    pressedKey = 0
                 elif event.key == pygame.K_DOWN:
-                    # is there a falling arrow in the green box?
-                        if len(fallingArrows) > 0:
-                            for fallingArrow in fallingArrows:
-                                if fallingArrow['type'] == 1 and fallingArrow['green']:
-                                    score += 1
-                                    fallingArrow['shouldRemove'] = True
-                                    break
+                    pressedKey = 1
                 elif event.key == pygame.K_LEFT:
-                     # is there a falling arrow in the green box?
-                        if len(fallingArrows) > 0:
-                            for fallingArrow in fallingArrows:
-                                if fallingArrow['type'] == 2 and fallingArrow['green']:
-                                    score += 1
-                                    fallingArrow['shouldRemove'] = True
-                                    break
+                    pressedKey = 2
                 elif event.key == pygame.K_RIGHT:
-                     # is there a falling arrow in the green box?
-                        if len(fallingArrows) > 0:
-                            for fallingArrow in fallingArrows:
-                                if fallingArrow['type'] == 3 and fallingArrow['green']:
-                                    score += 1
-                                    fallingArrow['shouldRemove'] = True
-                                    break
+                    pressedKey = 3
                 elif event.key == pygame.K_SPACE:
                     gameStart = True
         
@@ -149,8 +125,11 @@ def playGame():
                 fallingArrow['y'] += 0.05 * dt
                 # is the falling arrow in the green zone?
                 if fallingArrow['y'] > (display_height-250) and fallingArrow['y'] < (display_height-150):
-                    print(fallingArrow['type'])
                     fallingArrow['green'] = True
+                    if pressedKey == fallingArrow['type']:
+                        score += 1
+                        fallingArrow['shouldRemove'] = True
+                        pressedKey = None
                 
 
                 if fallingArrow['shouldRemove']:
