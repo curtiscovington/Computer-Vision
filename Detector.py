@@ -264,7 +264,9 @@ class Detector():
                     # KLT tracking update current direction
 
                     if self.lastPoints is not None:
-                        dir = self.getQuadrant(self.lastPoints[0][0][0], self.lastPoints[0][0][1]) # potentially use different x,y
+                        if len(self.lastPoints > 0):
+                            if len(self.lastPoints[0][0]):
+                                dir = self.getQuadrant(self.lastPoints[0][0][0], self.lastPoints[0][0][1]) # potentially use different x,y
                         #print(dir)
                 else:
                     # track quadrant based on the max value of each quadrant
@@ -277,9 +279,9 @@ class Detector():
                     direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
                     dir = direction_scores.get(max(direction_scores))
                 
-                print(dir)
+                #print(dir)
                 if self.playGame and dir is not self.currentDirection and dir is not None:
-                    print("hit loop")
+                    #print("hit loop")
                     self.currentDirection = dir
                     pyautogui.press(self.currentDirection)
                 # else:
