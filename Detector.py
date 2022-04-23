@@ -78,10 +78,10 @@ class Detector():
                 elif quad == "right":
                     # add index to lower triangle indices
                     self.right.append((y, x))
-                elif quad == "bot":
+                elif quad == "down":
                     # add index to right triangle indices
                     self.bot.append((y, x))
-                elif quad == "top":
+                elif quad == "up":
                     # add index to left triangle indices
                     self.top.append((y, x))
                 
@@ -104,9 +104,9 @@ class Detector():
             elif not leftLine and not rightLine:
                 return "right"
             elif leftLine and not rightLine:
-                return "bot"
+                return "down"
             elif not leftLine and rightLine:
-                return "top"
+                return "up"
 
     def updateTestImage(self):
         # everything below y = 200 is the colorLower
@@ -262,8 +262,10 @@ class Detector():
                 dir = None
                 if self.type == 2:
                     # KLT tracking update current direction
-                    if self.lastClick is not None:
-                        dir = self.getQuadrant(self.lastClick[0], self.lastClick[1]) # potentially use different x,y
+
+                    if self.lastPoints is not None:
+                        dir = self.getQuadrant(self.lastPoints[0][0][0], self.lastPoints[0][0][1]) # potentially use different x,y
+                        #print(dir)
                 else:
                     # track quadrant based on the max value of each quadrant
                     topDiff = mask[self.top[:, 0], self.top[:, 1]]
@@ -275,11 +277,13 @@ class Detector():
                     direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
                     dir = direction_scores.get(max(direction_scores))
                 
-                if self.playGame and dir is not self.currentDirection:
+                print(dir)
+                if self.playGame and dir is not self.currentDirection and dir is not None:
+                    print("hit loop")
                     self.currentDirection = dir
                     pyautogui.press(self.currentDirection)
-                else:
-                    self.currentDirection = dir
+                # else:
+                #     self.currentDirection = dir
 
             i = i + 1
             self.lastFrame = frame.copy()
