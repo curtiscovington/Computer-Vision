@@ -44,6 +44,7 @@ class Detector():
     type = 0 # 0 = color, 1 = background subtraction, 2 = KLT
     currentDirection = None
     lastFrame = None
+    lastPoints = None
 
     playGame = False
 
@@ -118,12 +119,12 @@ class Detector():
         cv.putText(self.testImg, str(self.colorLower), (10, 230), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         self.testImg = cv.cvtColor(self.testImg, cv.COLOR_HSV2BGR)
         
-        cv.setTrackbarPos("-H", "HSV Range", self.colorLower[0])
-        cv.setTrackbarPos("-S", "HSV Range", self.colorLower[1])
-        cv.setTrackbarPos("-V", "HSV Range", self.colorLower[2])
-        cv.setTrackbarPos("+H", "HSV Range", self.colorUpper[0])
-        cv.setTrackbarPos("+S", "HSV Range", self.colorUpper[1])
-        cv.setTrackbarPos("+V", "HSV Range", self.colorUpper[2])
+#         cv.setTrackbarPos("-H", "HSV Range", self.colorLower[0])
+#         cv.setTrackbarPos("-S", "HSV Range", self.colorLower[1])
+#         cv.setTrackbarPos("-V", "HSV Range", self.colorLower[2])
+#         cv.setTrackbarPos("+H", "HSV Range", self.colorUpper[0])
+#         cv.setTrackbarPos("+S", "HSV Range", self.colorUpper[1])
+#         cv.setTrackbarPos("+V", "HSV Range", self.colorUpper[2])
 
     def onClick(self, event, x, y, flags, param):
         
@@ -213,20 +214,27 @@ class Detector():
                     cv.circle(frame, self.lastClick, 5, (0, 0, 255), -1)
             else:
                 # KLT tracking
+                #if user clicked, then set points to track to the user's defined coordinates
                 if self.lastClick is not None:
-                    lastPoints = np.array([[[self.lastClick[0], self.lastClick[1]]]], dtype=np.float32)
+                    self.lastPoints = np.array([[[self.lastClick[0], self.lastClick[1]]]], dtype=np.float32)
+                    self.lastClick = None
+                #if there are some points to track, then perform KLT tracking
+                if self.lastPoints is not None:
                     lastGray = cv.cvtColor(self.lastFrame, cv.COLOR_BGR2GRAY)
                     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-                    nextPoints, st, err = cv.calcOpticalFlowPyrLK(lastGray, gray, lastPoints, None, **lkParams)
+                    nextPoints, st, err = cv.calcOpticalFlowPyrLK(lastGray, gray, self.lastPoints, None, **lkParams)
 
                     if nextPoints is not None:
                         matchingNew = nextPoints[st==1]
-                        matchingOld = lastPoints[st==1]
+                        matchingOld = self.lastPoints[st==1]
                     #put circles where tracked points are
                     for i, (new, _) in enumerate(zip(matchingNew, matchingOld)):
                         a, b = new.ravel()
                         frame = cv.circle(frame, (int(a), int(b)), 5, (0,0,255), -1)
-            
+
+                    #Set the next points to track as the points where they are in the next(this) frame
+                    #note: reshape to fit required input for OpenCV LK algorithm
+                    self.lastPoints = matchingNew.reshape(-1, 1, 2)
 
             if self.currentDirection is not None:
                 cv.putText(frame, self.currentDirection, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
