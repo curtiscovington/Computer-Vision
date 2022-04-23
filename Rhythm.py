@@ -3,7 +3,6 @@ import numpy as np
 import time
 import random
 
-
 # play a simple rhythm game that has left right up down arrows that need to be pressed at a certain time
 def playGame():
     # display left up right down arrows
@@ -32,7 +31,14 @@ def playGame():
     right = pygame.transform.scale(right, (100,100))
 
     score = 0
+    fallingArrows = []
+    startTime = 0
+    arrowNeeded = False
+    arrowsAdded = 0
     while crashed is not True:
+        dt = clock.tick(60)
+        if gameStart:
+            startTime += dt
         prevArrow = arrow
         # if arrow bag is empty, reset it
         if len(arrowBag) == 0:
@@ -41,6 +47,7 @@ def playGame():
             random.shuffle(arrowBag)
         
         if arrow is None:
+            arrowNeeded = True
             # pick a random arrow from the bag and remove it from the bag
             nextArrow = arrowBag.pop()
             if nextArrow == prevArrow:
@@ -60,53 +67,105 @@ def playGame():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     if arrow == 0:
-                        score += 1
-                        arrow = None
-                    else:
-                        score -= 1
-                        arrow = None
+                        # is there a falling arrow in the green box?
+                        if len(fallingArrows) > 0:
+                            for fallingArrow in fallingArrows:
+                                if fallingArrow['type'] == 0 and fallingArrow['green']:
+                                    score += 1
+                                    fallingArrow['shouldRemove'] = True
+                                    break
                 elif event.key == pygame.K_DOWN:
-                    if arrow == 1:
-                        score += 1
-                        arrow = None
-                    else:
-                        score -= 1
-                        arrow = None
+                    # is there a falling arrow in the green box?
+                        if len(fallingArrows) > 0:
+                            for fallingArrow in fallingArrows:
+                                if fallingArrow['type'] == 1 and fallingArrow['green']:
+                                    score += 1
+                                    fallingArrow['shouldRemove'] = True
+                                    break
                 elif event.key == pygame.K_LEFT:
-                    if arrow == 2:
-                        score += 1
-                        arrow = None
-                    else:
-                        score -= 1
-                        arrow = None
+                     # is there a falling arrow in the green box?
+                        if len(fallingArrows) > 0:
+                            for fallingArrow in fallingArrows:
+                                if fallingArrow['type'] == 2 and fallingArrow['green']:
+                                    score += 1
+                                    fallingArrow['shouldRemove'] = True
+                                    break
                 elif event.key == pygame.K_RIGHT:
-                    if arrow == 3:
-                        score += 1
-                        arrow = None
-                    else:
-                        score -= 1
-                        arrow = None
+                     # is there a falling arrow in the green box?
+                        if len(fallingArrows) > 0:
+                            for fallingArrow in fallingArrows:
+                                if fallingArrow['type'] == 3 and fallingArrow['green']:
+                                    score += 1
+                                    fallingArrow['shouldRemove'] = True
+                                    break
                 elif event.key == pygame.K_SPACE:
                     gameStart = True
         
+       
         if gameStart:
             if score < -5:
                 crashed = True
-            display.fill(window_color)
+            
             # display the arrow
-            if arrow == 0:
-                display.blit(up, (display_width/2-50, display_height/2-50))
-            elif arrow == 1:
-                display.blit(down, (display_width/2-50, display_height/2-50))
-            elif arrow == 2:
-                display.blit(left, (display_width/2-50, display_height/2-50))
-            elif arrow == 3:
-                display.blit(right, (display_width/2-50, display_height/2-50))
-            pygame.display.set_caption("Rhythm Game"+"  "+"SCORE: "+str(score))
-            pygame.display.update()
+            if arrowNeeded:
+                arrowsAdded += 1
+                if arrow == 0:
+                    img = up.copy()
+                    fallingArrow = {'img':img, 'x':(display_width/2-50), 'y':-100, 'type':0, 'id':arrowsAdded, 'shouldRemove': False, 'green': False}
+                    fallingArrows.append(fallingArrow)
+                    arrowNeeded = False
+                    # display.blit(up, (display_width/2-50, display_height/2-50))
+                elif arrow == 1:
+                    img = down.copy()
+                    fallingArrow = {'img':img, 'x':(display_width/2-50), 'y':-100, 'type':1, 'id':arrowsAdded, 'shouldRemove': False, 'green': False}
+                    fallingArrows.append(fallingArrow)
+                    arrowNeeded = False
+                    # display.blit(down, (display_width/2-50, display_height/2-50))
+                elif arrow == 2:
+                    img = left.copy()
+                    fallingArrow = {'img':img, 'x':(display_width/2-50) - 200, 'y':-100, 'type':2, 'id':arrowsAdded, 'shouldRemove': False, 'green': False}
+                    fallingArrows.append(fallingArrow)
+                    arrowNeeded = False
+                    # display.blit(left, (display_width/2-50, display_height/2-50))
+                elif arrow == 3:
+                    img = right.copy()
+                    fallingArrow = {'img':img, 'x':(display_width/2-50) + 200, 'y':-100, 'type':3, 'id':arrowsAdded, 'shouldRemove': False, 'green': False}
+                    fallingArrows.append(fallingArrow)
+                    arrowNeeded = False
+                    # display.blit(right, (display_width/2-50, display_height/2-50))
+            
             
 
-        clock.tick(2)
+             # clear the screen 
+            display.fill((0,0,0))
+            pygame.display.set_caption("Rhythm Game"+"  "+"SCORE: "+str(score))
+
+            # draw the green zone near the bottom
+            pygame.draw.rect(display, green, (0,display_height-250,display_width,150))
+            
+            # draw the falling arrows
+            for fallingArrow in fallingArrows:
+                display.blit(fallingArrow['img'], (fallingArrow['x'], fallingArrow['y']))
+                fallingArrow['y'] += 0.05 * dt
+                # is the falling arrow in the green zone?
+                if fallingArrow['y'] > (display_height-250) and fallingArrow['y'] < (display_height-150):
+                    print(fallingArrow['type'])
+                    fallingArrow['green'] = True
+                
+
+                if fallingArrow['shouldRemove']:
+                    fallingArrows.remove(fallingArrow)
+                elif fallingArrow['y'] > display_height:
+                    fallingArrows.remove(fallingArrow)
+                    score = score - 1
+           
+            pygame.display.update()
+
+            # every 2 seconds, add a new arrow to the bag
+            if startTime > 2000:
+                startTime = 0
+                arrow = None
+        
     return score
     # # display the arrows on the screen
     # display.blit(up, (50,50))
