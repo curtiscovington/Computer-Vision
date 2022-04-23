@@ -118,23 +118,14 @@ class Detector():
         cv.putText(self.testImg, str(self.colorUpper), (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv.putText(self.testImg, str(self.colorLower), (10, 230), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         self.testImg = cv.cvtColor(self.testImg, cv.COLOR_HSV2BGR)
-        
-#         cv.setTrackbarPos("-H", "HSV Range", self.colorLower[0])
-#         cv.setTrackbarPos("-S", "HSV Range", self.colorLower[1])
-#         cv.setTrackbarPos("-V", "HSV Range", self.colorLower[2])
-#         cv.setTrackbarPos("+H", "HSV Range", self.colorUpper[0])
-#         cv.setTrackbarPos("+S", "HSV Range", self.colorUpper[1])
-#         cv.setTrackbarPos("+V", "HSV Range", self.colorUpper[2])
 
     def onClick(self, event, x, y, flags, param):
-        
         if event == cv.EVENT_LBUTTONDOWN:
             self.lastClick = (x, y)
             _, frame = self.capture.read()
 
             hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
            
-            
             pixel = hsv[y, x]
             
             lH = min(max(0, pixel[0] - self.hRange), 179)
@@ -184,6 +175,7 @@ class Detector():
     def run(self):
         cv.startWindowThread()
         cv.namedWindow('detector')
+        cv.setWindowTitle('detector', 'Color Range')
         cv.setMouseCallback("detector", self.onClick)
 
         cv.namedWindow('HSV Range')
@@ -201,6 +193,7 @@ class Detector():
             if frame is None:
                 break
             self.updateTestImage()
+
             # mirror the frame
             frame = cv.flip(frame, 1)
             if self.type == 1:
@@ -262,12 +255,10 @@ class Detector():
                 dir = None
                 if self.type == 2:
                     # KLT tracking update current direction
-
                     if self.lastPoints is not None:
                         if len(self.lastPoints > 0):
                             if len(self.lastPoints[0][0]):
                                 dir = self.getQuadrant(self.lastPoints[0][0][0], self.lastPoints[0][0][1]) # potentially use different x,y
-                        #print(dir)
                 else:
                     # track quadrant based on the max value of each quadrant
                     topDiff = mask[self.top[:, 0], self.top[:, 1]]
@@ -279,13 +270,9 @@ class Detector():
                     direction_scores = {sum(topDiff): "up", sum(rightDiff): "right", sum(bottomDiff): "down", sum(leftDiff): "left"}
                     dir = direction_scores.get(max(direction_scores))
                 
-                #print(dir)
                 if self.playGame and dir is not self.currentDirection and dir is not None:
-                    #print("hit loop")
                     self.currentDirection = dir
                     pyautogui.press(self.currentDirection)
-                # else:
-                #     self.currentDirection = dir
 
             i = i + 1
             self.lastFrame = frame.copy()
@@ -317,6 +304,13 @@ class Detector():
                         self.playGame = False
                 elif keyboard == ord('b'):
                     self.type = (self.type + 1) % 3
+                    # set the window title
+                    if self.type == 0:
+                        cv.setWindowTitle('detector', 'Color Range')
+                    elif self.type == 1:
+                        cv.setWindowTitle('detector', 'Background Subtraction')
+                    else:
+                        cv.setWindowTitle('detector', 'KLT Tracking')
                 # if the 'q' key is pressed
                 elif keyboard == ord('q'):
                     self.capture.release()
